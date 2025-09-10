@@ -14,6 +14,12 @@ export default function AnimatedBackground() {
     let animationId: number;
     const particles: Particle[] = [];
     
+    // Ensure canvas has dimensions
+    if (!canvas.width || !canvas.height) {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    
     // Set canvas size
     const resizeCanvas = () => {
       canvas.width = window.innerWidth;
@@ -33,8 +39,8 @@ export default function AnimatedBackground() {
       opacityDirection: number;
 
       constructor() {
-        this.x = Math.random() * canvas.width;
-        this.y = Math.random() * canvas.height;
+        this.x = Math.random() * (canvas?.width || 800);
+        this.y = Math.random() * (canvas?.height || 600);
         this.vx = (Math.random() - 0.5) * 0.5;
         this.vy = (Math.random() - 0.5) * 0.5;
         this.size = Math.random() * 2 + 1;
@@ -53,10 +59,10 @@ export default function AnimatedBackground() {
         }
 
         // Wrap around edges
-        if (this.x < 0) this.x = canvas.width;
-        if (this.x > canvas.width) this.x = 0;
-        if (this.y < 0) this.y = canvas.height;
-        if (this.y > canvas.height) this.y = 0;
+        if (this.x < 0) this.x = canvas?.width || 800;
+        if (this.x > (canvas?.width || 800)) this.x = 0;
+        if (this.y < 0) this.y = canvas?.height || 600;
+        if (this.y > (canvas?.height || 600)) this.y = 0;
       }
 
       draw() {
@@ -89,9 +95,11 @@ export default function AnimatedBackground() {
       }
     }
 
-    // Create particles
-    for (let i = 0; i < 50; i++) {
-      particles.push(new Particle());
+    // Create particles only if canvas is ready
+    if (canvas && canvas.width && canvas.height) {
+      for (let i = 0; i < 50; i++) {
+        particles.push(new Particle());
+      }
     }
 
     // Draw grid
@@ -104,17 +112,17 @@ export default function AnimatedBackground() {
       ctx.strokeStyle = `hsla(${hue}, 60%, 50%, 0.08)`;
       ctx.lineWidth = 1;
 
-      for (let x = 0; x < canvas.width; x += gridSize) {
+      for (let x = 0; x < (canvas?.width || 800); x += gridSize) {
         ctx.beginPath();
         ctx.moveTo(x, 0);
-        ctx.lineTo(x, canvas.height);
+        ctx.lineTo(x, canvas?.height || 600);
         ctx.stroke();
       }
 
-      for (let y = 0; y < canvas.height; y += gridSize) {
+      for (let y = 0; y < (canvas?.height || 600); y += gridSize) {
         ctx.beginPath();
         ctx.moveTo(0, y);
-        ctx.lineTo(canvas.width, y);
+        ctx.lineTo(canvas?.width || 800, y);
         ctx.stroke();
       }
     };
@@ -157,6 +165,7 @@ export default function AnimatedBackground() {
     };
 
     const animate = () => {
+      if (!canvas || !ctx) return;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
       drawGrid();
