@@ -1,6 +1,16 @@
 'use client';
 import { useEffect, useRef } from 'react';
 
+interface Particle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  size: number;
+  opacity: number;
+  opacityDirection: number;
+}
+
 export default function AnimatedBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -14,14 +24,9 @@ export default function AnimatedBackground() {
     let animationId: number;
     const particles: Particle[] = [];
     
-    // Ensure canvas has dimensions
-    if (!canvas.width || !canvas.height) {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    }
-    
     // Set canvas size
     const resizeCanvas = () => {
+      if (!canvas) return;
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
     };
@@ -29,109 +34,99 @@ export default function AnimatedBackground() {
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
 
-    class Particle {
-      x: number;
-      y: number;
-      vx: number;
-      vy: number;
-      size: number;
-      opacity: number;
-      opacityDirection: number;
+    // Particle class with proper context handling
+    const createParticle = (): Particle => ({
+      x: Math.random() * (canvas.width || 800),
+      y: Math.random() * (canvas.height || 600),
+      vx: (Math.random() - 0.5) * 0.5,
+      vy: (Math.random() - 0.5) * 0.5,
+      size: Math.random() * 2 + 1,
+      opacity: Math.random() * 0.5 + 0.2,
+      opacityDirection: Math.random() > 0.5 ? 1 : -1,
+    });
 
-      constructor() {
-        this.x = Math.random() * (canvas?.width || 800);
-        this.y = Math.random() * (canvas?.height || 600);
-        this.vx = (Math.random() - 0.5) * 0.5;
-        this.vy = (Math.random() - 0.5) * 0.5;
-        this.size = Math.random() * 2 + 1;
-        this.opacity = Math.random() * 0.5 + 0.2;
-        this.opacityDirection = Math.random() > 0.5 ? 1 : -1;
+    const updateParticle = (particle: Particle) => {
+      particle.x += particle.vx;
+      particle.y += particle.vy;
+      
+      // Pulse opacity
+      particle.opacity += particle.opacityDirection * 0.01;
+      if (particle.opacity <= 0.1 || particle.opacity >= 0.7) {
+        particle.opacityDirection *= -1;
       }
 
-      update() {
-        this.x += this.vx;
-        this.y += this.vy;
-        
-        // Pulse opacity
-        this.opacity += this.opacityDirection * 0.01;
-        if (this.opacity <= 0.1 || this.opacity >= 0.7) {
-          this.opacityDirection *= -1;
-        }
+      // Wrap around edges
+      const width = canvas.width || 800;
+      const height = canvas.height || 600;
+      if (particle.x < 0) particle.x = width;
+      if (particle.x > width) particle.x = 0;
+      if (particle.y < 0) particle.y = height;
+      if (particle.y > height) particle.y = 0;
+    };
 
-        // Wrap around edges
-        if (this.x < 0) this.x = canvas?.width || 800;
-        if (this.x > (canvas?.width || 800)) this.x = 0;
-        if (this.y < 0) this.y = canvas?.height || 600;
-        if (this.y > (canvas?.height || 600)) this.y = 0;
-      }
+    const drawParticle = (particle: Particle, context: CanvasRenderingContext2D) => {
+      context.save();
+      context.globalAlpha = particle.opacity;
+      
+      // Create colorful gradient particles
+      const gradient = context.createRadialGradient(
+        particle.x, particle.y, 0,
+        particle.x, particle.y, particle.size * 2
+      );
+      
+      // Cycle through colors based on position
+      const hue = ((particle.x + particle.y) * 0.1) % 360;
+      gradient.addColorStop(0, `hsla(${hue}, 80%, 70%, 1)`);
+      gradient.addColorStop(0.5, `hsla(${(hue + 60) % 360}, 70%, 60%, 0.8)`);
+      gradient.addColorStop(1, `hsla(${(hue + 120) % 360}, 60%, 50%, 0.3)`);
+      
+      context.fillStyle = gradient;
+      context.beginPath();
+      context.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+      context.fill();
+      
+      // Add glow effect
+      context.shadowColor = `hsla(${hue}, 80%, 70%, 0.8)`;
+      context.shadowBlur = particle.size * 2;
+      context.fill();
+      
+      context.restore();
+    };
 
-      draw() {
-        if (!ctx || !canvas) return;
-        ctx.save();
-        ctx.globalAlpha = this.opacity;
-        
-        // Create colorful gradient particles
-        const gradient = ctx.createRadialGradient(
-          this.x, this.y, 0,
-          this.x, this.y, this.size * 2
-        );
-        
-        // Cycle through colors based on position
-        const hue = ((this.x + this.y) * 0.1) % 360;
-        gradient.addColorStop(0, `hsla(${hue}, 80%, 70%, 1)`);
-        gradient.addColorStop(0.5, `hsla(${(hue + 60) % 360}, 70%, 60%, 0.8)`);
-        gradient.addColorStop(1, `hsla(${(hue + 120) % 360}, 60%, 50%, 0.3)`);
-        
-        ctx.fillStyle = gradient;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Add glow effect
-        ctx.shadowColor = `hsla(${hue}, 80%, 70%, 0.8)`;
-        ctx.shadowBlur = this.size * 2;
-        ctx.fill();
-        
-        ctx.restore();
-      }
-    }
-
-    // Create particles only if canvas is ready
-    if (canvas && canvas.width && canvas.height) {
-      for (let i = 0; i < 50; i++) {
-        particles.push(new Particle());
-      }
+    // Create particles
+    for (let i = 0; i < 50; i++) {
+      particles.push(createParticle());
     }
 
     // Draw grid
-    const drawGrid = () => {
-      if (!ctx || !canvas) return;
+    const drawGrid = (context: CanvasRenderingContext2D) => {
       const gridSize = 100;
+      const width = canvas.width || 800;
+      const height = canvas.height || 600;
       
       // Create animated grid with color cycling
       const time = Date.now() * 0.001;
       const hue = (time * 20) % 360;
-      ctx.strokeStyle = `hsla(${hue}, 60%, 50%, 0.08)`;
-      ctx.lineWidth = 1;
+      context.strokeStyle = `hsla(${hue}, 60%, 50%, 0.08)`;
+      context.lineWidth = 1;
 
-      for (let x = 0; x < (canvas?.width || 800); x += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, canvas?.height || 600);
-        ctx.stroke();
+      for (let x = 0; x < width; x += gridSize) {
+        context.beginPath();
+        context.moveTo(x, 0);
+        context.lineTo(x, height);
+        context.stroke();
       }
 
-      for (let y = 0; y < (canvas?.height || 600); y += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(canvas?.width || 800, y);
-        ctx.stroke();
+      for (let y = 0; y < height; y += gridSize) {
+        context.beginPath();
+        context.moveTo(0, y);
+        context.lineTo(width, y);
+        context.stroke();
       }
     };
 
     // Draw connections between nearby particles
-    const drawConnections = () => {
-      if (!ctx || !canvas) return;
+    const drawConnections = (context: CanvasRenderingContext2D) => {
       for (let i = 0; i < particles.length; i++) {
         for (let j = i + 1; j < particles.length; j++) {
           const dx = particles[i].x - particles[j].x;
@@ -142,7 +137,7 @@ export default function AnimatedBackground() {
             const opacity = 1 - (distance / 150);
             
             // Create gradient line between particles
-            const gradient = ctx.createLinearGradient(
+            const gradient = context.createLinearGradient(
               particles[i].x, particles[i].y,
               particles[j].x, particles[j].y
             );
@@ -153,15 +148,15 @@ export default function AnimatedBackground() {
             gradient.addColorStop(0, `hsla(${hue1}, 70%, 60%, ${opacity * 0.4})`);
             gradient.addColorStop(1, `hsla(${hue2}, 70%, 60%, ${opacity * 0.4})`);
             
-            ctx.save();
-            ctx.strokeStyle = gradient;
-            ctx.lineWidth = 1;
-            ctx.globalAlpha = opacity * 0.3;
-            ctx.beginPath();
-            ctx.moveTo(particles[i].x, particles[i].y);
-            ctx.lineTo(particles[j].x, particles[j].y);
-            ctx.stroke();
-            ctx.restore();
+            context.save();
+            context.strokeStyle = gradient;
+            context.lineWidth = 1;
+            context.globalAlpha = opacity * 0.3;
+            context.beginPath();
+            context.moveTo(particles[i].x, particles[i].y);
+            context.lineTo(particles[j].x, particles[j].y);
+            context.stroke();
+            context.restore();
           }
         }
       }
@@ -169,16 +164,17 @@ export default function AnimatedBackground() {
 
     const animate = () => {
       if (!canvas || !ctx) return;
+      
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
-      drawGrid();
+      drawGrid(ctx);
       
       particles.forEach(particle => {
-        particle.update();
-        particle.draw();
+        updateParticle(particle);
+        drawParticle(particle, ctx);
       });
       
-      drawConnections();
+      drawConnections(ctx);
       
       animationId = requestAnimationFrame(animate);
     };
