@@ -19,17 +19,29 @@ function ContactForm() {
     const form = e.currentTarget;
     const formData = new FormData(form);
     const payload = Object.fromEntries(formData.entries());
+    
+    // For static deployment, just simulate form submission
+    const isStatic = process.env.NODE_ENV === 'production' || !process.env.NEXT_PUBLIC_API_BASE;
+    
     try {
       setLoading(true);
       setStatus(null);
-      const res = await fetch(process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:3001' + '/contact', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error('Request failed');
-      setStatus('Message sent. Thank you!');
-      form.reset();
+      
+      if (isStatic) {
+        // Simulate API call for static deployment
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        setStatus('Thanks for your message! This is a demo - please contact via LinkedIn or GitHub.');
+        form.reset();
+      } else {
+        const res = await fetch(process.env.NEXT_PUBLIC_API_BASE + '/contact', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error('Request failed');
+        setStatus('Message sent. Thank you!');
+        form.reset();
+      }
     } catch (e) {
       setStatus('Failed to send. Please try again.');
     } finally {
