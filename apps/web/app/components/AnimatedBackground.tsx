@@ -66,6 +66,7 @@ export default function AnimatedBackground() {
       }
 
       draw() {
+        if (!ctx || !canvas) return;
         ctx.save();
         ctx.globalAlpha = this.opacity;
         
@@ -104,6 +105,7 @@ export default function AnimatedBackground() {
 
     // Draw grid
     const drawGrid = () => {
+      if (!ctx || !canvas) return;
       const gridSize = 100;
       
       // Create animated grid with color cycling
@@ -129,6 +131,7 @@ export default function AnimatedBackground() {
 
     // Draw connections between nearby particles
     const drawConnections = () => {
+      if (!ctx || !canvas) return;
       for (let i = 0; i < particles.length; i++) {
         for (let j = i + 1; j < particles.length; j++) {
           const dx = particles[i].x - particles[j].x;
